@@ -11,29 +11,36 @@ import random as rn
 import DQL_environment
 import DQL_brain
 import DQL_dqn
+from tqdm import tqdm
+import matplotlib.pyplot as plt
+from keras.optimizers import Adam
 
 #Setting seeds for reproducibility
-os.environ['PYTHONHASHSEED'] = '0'
-np.random.seed(42)
-rn.seed(12345)
+# os.environ['PYTHONHASHSEED'] = '0'
+# np.random.seed(42)
+# rn.seed(12345)
 
 #Setting Parameters
-epsilon = .3
+beta = 0.01 # reward step
 number_actions = 5
 direction_boundary = (number_actions - 1) / 2
-number_epochs = 100
+temperature_step = 1.5
+max_energy = direction_boundary * temperature_step
+number_epochs = 1000
 max_memory = 3000
 batch_size = 512
-temperature_step = 1.5
+
+
 
 #Building the environment
 env = DQL_environment.Environment(optimal_temperature = (18.0, 24.0), initial_month = 0, initial_number_users = 20, initial_rate_data = 30)
 
 #Building the brain
-brain = DQL_brain.Brain(learning_rate = 0.00001, number_actions = number_actions)
+learning_rate = 0.01
+brain = DQL_brain.Brain(learning_rate = learning_rate, number_actions = number_actions)
 
 #Building the model
-dqn = DQL_dqn.DQN(max_memory = max_memory, discount = 0.9)
+dqn = DQL_dqn.DQN(max_memory = max_memory, discount = 0.99)
 
 
 #Training Mode = on
@@ -42,14 +49,16 @@ train = True
 #Training the AI
 env.train = train
 model = brain.model
-early_stopping = True
+early_stopping = False
 patience = 10
 best_total_reward = -np.inf
 patience_count = 0
+rew_plot = []
+plt.figure()
 
 if (env.train):
     # Loop over Epochs (1 Epoch = 5 Months)
-    for epoch in range(1, number_epochs):
+    for epoch in tqdm(range(1, number_epochs)):
         total_reward = 0
         loss = 0.
         new_month = np.random.randint(0, 12)
@@ -57,29 +66,38 @@ if (env.train):
         game_over = False
         current_state, _, _ = env.observe()
         timestep = 0
+        r_hat = 0 
+        t_in_ai = 0
+        t_in_noai = 0
+        mse_T_ai = 0
+        mse_T_noai = 0
+        #learning rate update
+        if epoch % 100 == 0:
+            brain.learning_rate /= 10 
+            model.compile(loss = 'mse', optimizer = Adam(lr = brain.learning_rate))
+       
         #Loop over Timesteps (1 Timestep = 1 Minute) in one Epoch
         while ((not game_over) and timestep <= 5 * 30 * 24 * 60):
-            #Play action by Exploration
-            if np.random.rand() <= epsilon:
-                action = np.random.randint(0, number_actions)
-                if (action - direction_boundary < 0):
-                    direction = -1
-                else:
-                    direction = 1
-                energy_ai = abs(action - direction_boundary) * temperature_step
-            #Play action by Inference
+            
+            #Choose action a (softmax)
+            q_values = model.predict(current_state)
+            action = np.random.choice(number_actions, p = q_values[0])
+            
+            if (action - direction_boundary < 0):
+                direction = -1
             else:
-                q_values = model.predict(current_state)
-                action = np.argmax(q_values[0])
-                if (action - direction_boundary < 0):
-                    direction = -1
-                else:
-                    direction = 1
-                energy_ai = abs(action - direction_boundary) * temperature_step
+                direction = 1
+            energy_ai = abs(action - direction_boundary) * temperature_step
                 
             #Environment update: next state
-            next_state, reward, game_over = env.update_env(direction, energy_ai, int(timestep / (30*24*60)))
+            next_state, reward, game_over = env.update_env(direction, energy_ai, max_energy, int(timestep / (30*24*60)))
             total_reward += reward
+            
+            #AVG reward
+            q_hat = q_values[0][action]
+            next_q_hat = max(model.predict(next_state)[0])
+            delta = reward - r_hat + next_q_hat - q_hat
+            r_hat += beta * delta
             
             #Storing Transition in Memory
             dqn.remember([current_state, action, reward, next_state], game_over)
@@ -91,12 +109,30 @@ if (env.train):
             loss += model.train_on_batch(inputs, targets)
             timestep += 1
             current_state = next_state
+            
+            #Performance metrics
+            # inrange time
+            if env.temperature_ai > (17) and env.temperature_ai < (25):
+                t_in_ai += 1
+            if env.temperature_noai > (17) and env.temperature_noai < (25):
+                t_in_noai += 1   
+            
+            # mse from optimal T = 21°
+            mse_T_ai += ((env.temperature_ai - 21)**2)**(1/2)
+            mse_T_noai += ((env.temperature_noai - 21)**2)**(1/2)
     
         #Printing training result for each Epoch
-        print("\n")
-        print("Epoch: {:03d}/{:03d}".format(epoch, number_epochs))
-        print("Total Energy spent with an AI: {:.0f}".format(env.total_energy_ai))
-        print("Total Energy spent with no AI: {:.0f}".format(env.total_energy_noai))
+        print("\n\n")
+        print("Epoch: {:03d}/{:03d} (t = {}')".format(epoch, number_epochs, timestep))
+        print("Energy spent with an AI: {:.0f}".format(env.total_energy_ai))
+        print("Energy spent with No AI: {:.0f}".format(env.total_energy_noai))
+#        print('Loss: {}'.format(loss))
+        print("\nTime in range AI: {:.2f}".format(t_in_ai/timestep))
+        print("Time in range No AI: {:.2f}".format(t_in_noai/timestep))
+        print("\nTemperature mse AI: {:.2f}".format(mse_T_ai/timestep))
+        print("Temperature mse No AI: {:.2f}".format(mse_T_noai/timestep))
+        
+        print("\n R_tot: {}, R_mean: {}, R_hat: {}".format(total_reward, total_reward/timestep, r_hat))
         
         #Early stopping
         if (early_stopping):
@@ -111,8 +147,14 @@ if (env.train):
                 break
 
         #Saving the model
-        model.save("model.h5")
+        model.save("modelBVSO.h5")
         
+        rew_plot.append(total_reward)
+        if epoch % 25 == 0:
+            plt.plot(rew_plot)
+            plt.xlabel("epochs")
+            plt.ylabel("reward")
+            plt.title("Model Training")
 
 
 
