@@ -27,4 +27,4 @@ class Brain(object):
         self.model = Model(inputs = states, outputs = q_values)
         
         #Compiling the model with loss and optimizer (applying the compile method)
-        self.model.compile(loss = 'mse', optimizer = Adam(lr = self.learning_rate))
+        self.model.compile(loss = 'mean_squared_logarithmic_error', optimizer = Adam(lr = self.learning_rate))

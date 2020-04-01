@@ -8,17 +8,18 @@ class Environment(object):
     
     #Introducing and Initializing all the parametersand variables of the environment
     def __init__ (self,
-                  optimal_temperature = (18.0, 24.0),
+                  optimal_temperature = (20.0, 24.0),
                   initial_month = 0,
                   initial_number_users = 10,
-                  initial_rate_data = 60 ):
+                  initial_rate_data = 60,
+                  max_energy = 5):
         self.monthly_atmospheric_temperatures = [1.0, 5.0, 7.0, 10.0, 11.0, 20.0, 23.0, 24.0, 22.0, 10.0, 5.0, 1.0]
         self.initial_month = initial_month
         self.atmospheric_temperature = \
         self.monthly_atmospheric_temperatures[initial_month]
         self.optimal_temperature = optimal_temperature
-        self.min_temperature = 12
-        self.max_temperature = 30
+        self.min_temperature = optimal_temperature[0] - (max_energy + 2)
+        self.max_temperature = optimal_temperature[1] + (max_energy + 2)
         self.min_number_users = 10
         self.max_number_users = 100
         self.max_update_users = 5
@@ -29,7 +30,8 @@ class Environment(object):
         self.current_number_users = initial_number_users
         self.initial_rate_data = initial_rate_data
         self.current_rate_data = initial_rate_data
-        self.intrinsic_temperature = self.atmospheric_temperature + 0.01 * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
+        self.kmodel = 0.3
+        self.intrinsic_temperature = self.atmospheric_temperature + self.kmodel  * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
         self.temperature_ai = (self.optimal_temperature[0] + self.optimal_temperature[1]) / 2.0
         self.temperature_noai = (self.optimal_temperature[0] + self.optimal_temperature[1]) / 2.0
         self.total_energy_ai = 0.0
@@ -46,10 +48,14 @@ class Environment(object):
         energy_noai = 0
         if (self.temperature_noai < self.optimal_temperature[0]):
             energy_noai = self.optimal_temperature[0] - self.temperature_noai
-            self.temperature_noai = self.optimal_temperature[0]
+            if energy_noai > max_energy:
+                energy_noai = max_energy
+            self.temperature_noai = self.temperature_noai + energy_noai
         elif (self.temperature_noai > self.optimal_temperature[1]):
             energy_noai = self.temperature_noai - self.optimal_temperature[1]
-            self.temperature_noai = self.optimal_temperature[1]
+            if energy_noai > max_energy:
+                energy_noai = max_energy
+            self.temperature_noai = self.temperature_noai - energy_noai
 
         
         # Next state: S'
@@ -66,7 +72,7 @@ class Environment(object):
             self.current_rate_data = self.min_rate_data
         past_intrinsic_temperature = self.intrinsic_temperature
     
-        self.intrinsic_temperature = self.atmospheric_temperature + 0.1 * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
+        self.intrinsic_temperature = self.atmospheric_temperature + self.kmodel  * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
         delta_intrinsic_temperature = self.intrinsic_temperature - past_intrinsic_temperature
         if (direction == -1):
             delta_temperature_ai = -energy_ai
@@ -87,12 +93,14 @@ class Environment(object):
         if (self.temperature_ai < self.min_temperature):
             if (self.train == 1):
                 self.game_over = 1
+                self.reward = -10 
             else:
                 self.temperature_ai = self.optimal_temperature[0]
                 self.total_energy_ai += self.optimal_temperature[0] - self.temperature_ai
         elif (self.temperature_ai > self.max_temperature):
             if (self.train == 1):
                 self.game_over = 1
+                self.reward = -10 
             else:
                 self.temperature_ai = self.optimal_temperature[1] 
                 self.total_energy_ai += self.temperature_ai - self.optimal_temperature[1]
@@ -117,7 +125,7 @@ class Environment(object):
         self.initial_month = new_month
         self.current_number_users = self.initial_number_users
         self.current_rate_data = self.initial_rate_data
-        self.intrinsic_temperature = self.atmospheric_temperature + 0.1 * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
+        self.intrinsic_temperature = self.atmospheric_temperature + self.kmodel  * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
         self.temperature_ai =  (self.optimal_temperature[0] + self.optimal_temperature[1]) / 2.0
         self.temperature_noai = (self.optimal_temperature[0] + self.optimal_temperature[1]) / 2.0
         self.total_energy_ai = 0.0

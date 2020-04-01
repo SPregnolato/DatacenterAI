@@ -22,18 +22,18 @@ from keras.optimizers import Adam
 
 #Setting Parameters
 beta = 0.01 # reward step
-number_actions = 5
+number_epochs = 1000
+max_memory = 3000
+batch_size = 300
+
+number_actions = 7
 direction_boundary = (number_actions - 1) / 2
 temperature_step = 1.5
 max_energy = direction_boundary * temperature_step
-number_epochs = 1000
-max_memory = 3000
-batch_size = 512
-
-
+optimal_temperature = (20.0, 24.0)
 
 #Building the environment
-env = DQL_environment.Environment(optimal_temperature = (18.0, 24.0), initial_month = 0, initial_number_users = 20, initial_rate_data = 30)
+env = DQL_environment.Environment(optimal_temperature = optimal_temperature, initial_month = 0, initial_number_users = 20, initial_rate_data = 30, max_energy = max_energy)
 
 #Building the brain
 learning_rate = 0.01
@@ -54,11 +54,12 @@ patience = 10
 best_total_reward = -np.inf
 patience_count = 0
 rew_plot = []
+AVG_rew_plot = []
 plt.figure()
 
 if (env.train):
-    # Loop over Epochs (1 Epoch = 5 Months)
-    for epoch in tqdm(range(1, number_epochs)):
+    # Loop over Epochs (1 Epoch = 2 Months)
+    for epoch in range(1, number_epochs):
         total_reward = 0
         loss = 0.
         new_month = np.random.randint(0, 12)
@@ -77,49 +78,49 @@ if (env.train):
             model.compile(loss = 'mse', optimizer = Adam(lr = brain.learning_rate))
        
         #Loop over Timesteps (1 Timestep = 1 Minute) in one Epoch
-        while ((not game_over) and timestep <= 5 * 30 * 24 * 60):
-            
-            #Choose action a (softmax)
-            q_values = model.predict(current_state)
-            action = np.random.choice(number_actions, p = q_values[0])
-            
-            if (action - direction_boundary < 0):
-                direction = -1
-            else:
-                direction = 1
-            energy_ai = abs(action - direction_boundary) * temperature_step
+        for timestep in range(2 * 30 * 24 * 60):
+            if not game_over:
+                #Choose action a (softmax)
+                q_values = model.predict(current_state)
+                action = np.random.choice(number_actions, p = q_values[0])      
+                if (action - direction_boundary < 0):
+                    direction = -1
+                else:
+                    direction = 1
+                energy_ai = abs(action - direction_boundary) * temperature_step
+                    
+                #Environment update: next state
+                next_state, reward, game_over = env.update_env(direction, energy_ai, max_energy, int(timestep / (30*24*60)))
+                total_reward += reward
                 
-            #Environment update: next state
-            next_state, reward, game_over = env.update_env(direction, energy_ai, max_energy, int(timestep / (30*24*60)))
-            total_reward += reward
-            
-            #AVG reward
-            q_hat = q_values[0][action]
-            next_q_hat = max(model.predict(next_state)[0])
-            delta = reward - r_hat + next_q_hat - q_hat
-            r_hat += beta * delta
-            
-            #Storing Transition in Memory
-            dqn.remember([current_state, action, reward, next_state], game_over)
-            
-            #Gathering Inputs and Targets in separate Batches
-            inputs, targets = dqn.get_batch(model, batch_size = batch_size)
-            
-            #Compute the loss over the all Batches 
-            loss += model.train_on_batch(inputs, targets)
-            timestep += 1
-            current_state = next_state
-            
-            #Performance metrics
-            # inrange time
-            if env.temperature_ai > (17) and env.temperature_ai < (25):
-                t_in_ai += 1
-            if env.temperature_noai > (17) and env.temperature_noai < (25):
-                t_in_noai += 1   
-            
-            # mse from optimal T = 21°
-            mse_T_ai += ((env.temperature_ai - 21)**2)**(1/2)
-            mse_T_noai += ((env.temperature_noai - 21)**2)**(1/2)
+                #AVG reward
+                q_hat = q_values[0][action]
+                next_q_hat = max(model.predict(next_state)[0])
+                delta = reward - r_hat + next_q_hat - q_hat
+                r_hat += beta * delta
+                
+                #Storing Transition in Memory
+                dqn.remember([current_state, action, reward, next_state], game_over)
+                
+                #Gathering Inputs and Targets in separate Batches
+                inputs, targets = dqn.get_batch(model, batch_size = batch_size)
+                
+                #Compute the loss over the all Batches 
+                loss += model.train_on_batch(inputs, targets)
+                current_state = next_state
+                
+                #Performance metrics
+                # inrange time
+                if env.temperature_ai >= optimal_temperature[0] and env.temperature_ai <= optimal_temperature[1] :
+                    t_in_ai += 1
+                if env.temperature_noai >= optimal_temperature[0]  and env.temperature_noai <= optimal_temperature[1] :
+                    t_in_noai += 1   
+                
+                # mse from optimal T = 21°
+                mse_T_ai += ((env.temperature_ai - 21)**2)**(1/2)
+                mse_T_noai += ((env.temperature_noai - 21)**2)**(1/2)
+            else:
+                break
     
         #Printing training result for each Epoch
         print("\n\n")
@@ -150,10 +151,17 @@ if (env.train):
         model.save("modelBVSO.h5")
         
         rew_plot.append(total_reward)
+        AVG_rew_plot.append(total_reward/timestep)
         if epoch % 25 == 0:
+            plt.subplot(1,2,1)
             plt.plot(rew_plot)
             plt.xlabel("epochs")
             plt.ylabel("reward")
+            plt.title("Model Training")
+            plt.subplot(1,2,2)
+            plt.plot(AVG_rew_plot)
+            plt.xlabel("epochs")
+            plt.ylabel("AVG reward")
             plt.title("Model Training")
 
 
