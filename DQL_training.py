@@ -5,20 +5,14 @@
 # conda install -c conda-forge keras
 
 #Libraries
-import os
+
 import numpy as np
-import random as rn
 import DQL_environment
 import DQL_brain
 import DQL_dqn
-from tqdm import tqdm
 import matplotlib.pyplot as plt
 from keras.optimizers import Adam
 
-#Setting seeds for reproducibility
-# os.environ['PYTHONHASHSEED'] = '0'
-# np.random.seed(42)
-# rn.seed(12345)
 
 #Setting Parameters
 beta = 0.01 # reward step
@@ -37,7 +31,8 @@ env = DQL_environment.Environment(optimal_temperature = optimal_temperature, ini
 
 #Building the brain
 learning_rate = 0.01
-brain = DQL_brain.Brain(learning_rate = learning_rate, number_actions = number_actions)
+loss_f = 'mean_squared_logarithmic_error'
+brain = DQL_brain.Brain(learning_rate = learning_rate, number_actions = number_actions, loss = loss_f)
 
 #Building the model
 dqn = DQL_dqn.DQN(max_memory = max_memory, discount = 0.99)
@@ -55,8 +50,10 @@ best_total_reward = -np.inf
 patience_count = 0
 rew_plot = []
 AVG_rew_plot = []
+AVG_rew_plot_2 = []
+losses_plot = []
+AVG_losses_plot = []
 plt.figure()
-
 if (env.train):
     # Loop over Epochs (1 Epoch = 2 Months)
     for epoch in range(1, number_epochs):
@@ -72,11 +69,12 @@ if (env.train):
         t_in_noai = 0
         mse_T_ai = 0
         mse_T_noai = 0
-        #learning rate update
-        if epoch % 100 == 0:
-            brain.learning_rate /= 10 
-            model.compile(loss = 'mse', optimizer = Adam(lr = brain.learning_rate))
-       
+# review the leraning rate decay <---------------------------------------
+        # #learning rate update
+        # if epoch % 100 == 0:
+        #     brain.learning_rate /= 10 
+        #     model.compile(loss = loss_f, optimizer = Adam(lr = brain.learning_rate))
+# ------------------------------------------------------------------------    
         #Loop over Timesteps (1 Timestep = 1 Minute) in one Epoch
         for timestep in range(2 * 30 * 24 * 60):
             if not game_over:
@@ -127,14 +125,14 @@ if (env.train):
         print("Epoch: {:03d}/{:03d} (t = {}')".format(epoch, number_epochs, timestep))
         print("Energy spent with an AI: {:.0f}".format(env.total_energy_ai))
         print("Energy spent with No AI: {:.0f}".format(env.total_energy_noai))
-#        print('Loss: {}'.format(loss))
+        
         print("\nTime in range AI: {:.2f}".format(t_in_ai/timestep))
         print("Time in range No AI: {:.2f}".format(t_in_noai/timestep))
         print("\nTemperature mse AI: {:.2f}".format(mse_T_ai/timestep))
         print("Temperature mse No AI: {:.2f}".format(mse_T_noai/timestep))
         
-        print("\n R_tot: {}, R_mean: {}, R_hat: {}".format(total_reward, total_reward/timestep, r_hat))
-        
+        print("\nR_tot: {:.2f}, R_mean: {:.2f}, R_hat: {:.2f}".format(total_reward, total_reward/timestep, r_hat))
+        print("Loss_tot: {:.2f}, Loss_mean: {:.2f}".format(loss, loss/timestep*100))
         #Early stopping
         if (early_stopping):
             if (total_reward <= best_total_reward):
@@ -150,18 +148,37 @@ if (env.train):
         #Saving the model
         model.save("modelBVSO.h5")
         
+        
         rew_plot.append(total_reward)
         AVG_rew_plot.append(total_reward/timestep)
+        AVG_rew_plot_2.append((total_reward+10)/timestep)
+        losses_plot.append(loss)
+        AVG_losses_plot.append(loss/timestep)
         if epoch % 25 == 0:
-            plt.subplot(1,2,1)
+            plt.subplot(2,3,1)
             plt.plot(rew_plot)
             plt.xlabel("epochs")
             plt.ylabel("reward")
-            plt.title("Model Training")
-            plt.subplot(1,2,2)
+            plt.title("Episode Reward")
+            plt.subplot(2,3,2)
             plt.plot(AVG_rew_plot)
             plt.xlabel("epochs")
             plt.ylabel("AVG reward")
+            plt.title("Relative Episode Reward")
+            plt.subplot(2,3,3)
+            plt.plot(AVG_rew_plot_2)
+            plt.xlabel("epochs")
+            plt.ylabel("AVG reward")
+            plt.title("Relative Episode Reward - (no Rend)")
+            plt.subplot(2,3,4)
+            plt.plot(losses_plot)
+            plt.xlabel("epochs")
+            plt.ylabel("loss")
+            plt.title("Episode Training Loss")
+            plt.subplot(2,3,5)
+            plt.plot(AVG_losses_plot)
+            plt.xlabel("epochs")
+            plt.ylabel("Episode Relative Training Loss")
             plt.title("Model Training")
 
 

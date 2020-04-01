@@ -8,7 +8,7 @@ from keras.optimizers import Adam
 #Brain Class --> to create as many objects as we want
 class Brain(object):
     
-    def __init__ (self, learning_rate = 0.001, number_actions = 5, number_states = 3):
+    def __init__ (self, learning_rate = 0.001, number_actions = 5, number_states = 3, loss = 'mean_squared_error'):
         
         self.learning_rate = learning_rate 
         
@@ -27,4 +27,4 @@ class Brain(object):
         self.model = Model(inputs = states, outputs = q_values)
         
         #Compiling the model with loss and optimizer (applying the compile method)
-        self.model.compile(loss = 'mean_squared_logarithmic_error', optimizer = Adam(lr = self.learning_rate))
+        self.model.compile(loss = loss, optimizer = Adam(lr = self.learning_rate))

@@ -39,7 +39,7 @@ class Environment(object):
         self.reward = 0.0
         self.game_over = 0
         self.train = 1
-        
+        self.range_error = 0
 
     # Method to update the environment object right after the AI (agent) plays the action
     def update_env(self, direction, energy_ai, max_energy, month):
@@ -95,6 +95,8 @@ class Environment(object):
                 self.game_over = 1
                 self.reward = -10 
             else:
+                # print('Error - Tmin')
+                self.range_error += 1
                 self.temperature_ai = self.optimal_temperature[0]
                 self.total_energy_ai += self.optimal_temperature[0] - self.temperature_ai
         elif (self.temperature_ai > self.max_temperature):
@@ -102,6 +104,8 @@ class Environment(object):
                 self.game_over = 1
                 self.reward = -10 
             else:
+                # print('Error - Tmax')
+                self.range_error += 1
                 self.temperature_ai = self.optimal_temperature[1] 
                 self.total_energy_ai += self.temperature_ai - self.optimal_temperature[1]
      
@@ -133,6 +137,7 @@ class Environment(object):
         self.reward = 0.0
         self.game_over = 0
         self.train = 1
+        self.range_error = 0
        
       
     # Method to extract: current state, last reward, exit condition
