@@ -28,7 +28,7 @@ max_memory = epoch_len
 batch_size = 300
 
 r_hat = 0 
-beta = 0.01 # avg reward step
+beta = 0.01 # avg reward step --> consider 0.001
 discount = 0.99 # discount factor
 
 number_actions = 7

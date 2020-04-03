@@ -109,6 +109,7 @@ class Environment(object):
                 self.total_energy_ai += self.optimal_temperature[0] - self.temperature_ai
         elif (self.temperature_ai > self.max_temperature):
             if (self.train == 1):
+                self.game_over = 1
                 self.reward = -1
                 # self.reward = -5
             else:
