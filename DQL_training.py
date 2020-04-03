@@ -21,7 +21,7 @@ epoch_len = 2 * 30 * 24 * 60
 learning_rate = 0.01
 loss_f = 'mean_squared_logarithmic_error'  
 decay = 1e-2 / number_epochs
-opt = Adam(learning_rate=learning_rate, decay=decay, beta_1=0.95, beta_2=0.999, amsgrad=False)
+opt = Adam(learning_rate=learning_rate, decay=decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
 max_memory = 30 * 24 * 60  
 batch_size = 300
 
