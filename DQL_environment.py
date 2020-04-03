@@ -40,6 +40,7 @@ class Environment(object):
         self.game_over = 0
         self.train = 1
         self.range_error = 0
+        self.delta_intrinsic_temperature = 0
 
     # Method to update the environment object right after the AI (agent) plays the action
     def update_env(self, direction, energy_ai, max_energy, month, timestep):
@@ -73,33 +74,34 @@ class Environment(object):
         past_intrinsic_temperature = self.intrinsic_temperature
     
         self.intrinsic_temperature = self.atmospheric_temperature + self.kmodel  * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
-        delta_intrinsic_temperature = self.intrinsic_temperature - past_intrinsic_temperature
+        self.delta_intrinsic_temperature = self.intrinsic_temperature - past_intrinsic_temperature
         if (direction == -1):
             delta_temperature_ai = -energy_ai
         elif (direction == 1):
             delta_temperature_ai = energy_ai
-        self.temperature_ai += delta_intrinsic_temperature + delta_temperature_ai
-        self.temperature_noai += delta_intrinsic_temperature
+        self.temperature_ai += self.delta_intrinsic_temperature + delta_temperature_ai
+        self.temperature_noai += self.delta_intrinsic_temperature
         
         # Reward
         if (self.temperature_ai >= self.optimal_temperature[0]) and (self.temperature_ai <= self.optimal_temperature[1]):
-            self.reward = 1 - (energy_ai / (2*max_energy))
+            self.reward = 1 - (energy_ai / (2*max_energy)) 
             # reward ideas
-            # 1) self.reward = 1 - (energy_ai / (2*max_energy))
-            # 2) self.reward = 2 - (energy_ai / (2*max_energy)) + np.clip(np.log((self.total_energy_noai+1) / (self.total_energy_ai+1)), -0.5, 0.5)
-            # 3) self.reward = 1 - (energy_ai / (2*max_energy)) - (self.total_energy_ai / (2*(timestep+1) * max_energy))
+            # self.reward = 1 - (energy_ai / (2*max_energy))
+            # self.reward = 2 - (energy_ai / (2*max_energy)) + np.clip(np.log((self.total_energy_noai+1) / (self.total_energy_ai+1)), -0.5, 0.5)
+            # self.reward = 2 - (energy_ai / (2*max_energy)) - (self.total_energy_ai / ((timestep+1) * max_energy))
         else:
-            self.reward = -0.1 
             #reward ideas
-            # 1) self.reward = -0.1 
-            # 2) self.reward = -0.1 - (energy_ai / (4*max_energy))
+            # self.reward = -0.1 
+            # self.reward = -0.1 - (energy_ai / (4*max_energy))
+            self.reward = 0
         
         
         # Exit Conditions 
         if (self.temperature_ai < self.min_temperature):
             if (self.train == 1):
                 self.game_over = 1
-                self.reward = -10 
+                self.reward = -1
+                # self.reward = -5
             else:
                 # print('Error - Tmin')
                 self.range_error += 1
@@ -107,8 +109,8 @@ class Environment(object):
                 self.total_energy_ai += self.optimal_temperature[0] - self.temperature_ai
         elif (self.temperature_ai > self.max_temperature):
             if (self.train == 1):
-                self.game_over = 1
-                self.reward = -10 
+                self.reward = -1
+                # self.reward = -5
             else:
                 # print('Error - Tmax')
                 self.range_error += 1
@@ -144,6 +146,7 @@ class Environment(object):
         self.game_over = 0
         self.train = 1
         self.range_error = 0
+        self.delta_intrinsic_temperature = 0
        
       
     # Method to extract: current state, last reward, exit condition

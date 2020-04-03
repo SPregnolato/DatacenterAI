@@ -1,21 +1,25 @@
 
 #DEEP Q-LEARNING ALGORITHM (With Experience Repaly)
 import numpy as np
- 
+from collections import deque
  
 class DQN(object):
     #Initializing parameters and variables
     def __init__(self, max_memory = 100, discount = 0.99):
-        self.memory = list()
+        # self.memory = list()
+        self.memory = deque(maxlen=max_memory)
         self.max_memory = max_memory
         self.discount = discount
     
     #Methods to build the memory in Experience Replay
     def remember(self, transition, game_over):
         self.memory.append([transition, game_over])
-        if len(self.memory) > self.max_memory:
-            del self.memory[0]
-            
+    # def remember(self, transition, game_over):
+    #     self.memory.append([transition, game_over])
+    #     if len(self.memory) > self.max_memory:
+    #         del self.memory[0]
+    
+   
     #Methods to build two batches of 10 In and 10 Targes by extracting 10 transition
     def get_batch(self, model, batch_size):
         len_memory = len(self.memory)
@@ -30,9 +34,11 @@ class DQN(object):
             targets[i] = model.predict(current_state)[0]
             Q_sa_next = np.max(model.predict(next_state)[0])   
             if game_over:
-                targets[i, action] = reward 
+                targets[i, action] = reward - r_hat
+                # targets[i, action] = reward 
             else:
-                targets[i, action] = reward + self.discount * Q_sa_next
+                targets[i, action] = reward - r_hat + self.discount * Q_sa_next
+                # targets[i, action] = reward + self.discount * Q_sa_next
         return inputs, targets
 
-            
+   

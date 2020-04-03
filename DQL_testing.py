@@ -40,6 +40,8 @@ current_state, _, _ = env.observe()
 actions = []
 AI_T = []
 NO_AI_T = []
+FREE_T = []
+free_t = env.temperature_ai 
 time = []
 inside_AI = 0
 inside_NO_AI = 0
@@ -62,6 +64,8 @@ for timestep in tqdm(range(0, 5 * 30 * 24 * 60)):
     no_ai_T = env.temperature_noai
     AI_T.append(ai_T)
     NO_AI_T.append(no_ai_T)
+    free_t += env.delta_intrinsic_temperature
+    FREE_T.append(free_t)
     E_AI.append(env.total_energy_ai)
     E_NO_AI.append(env.total_energy_noai)
     time.append(timestep)
@@ -91,10 +95,11 @@ plt.subplot(2,3,1)
 plt.grid(True)
 plt.plot(AI_T)
 plt.plot(NO_AI_T)
+plt.plot(FREE_AI_T)
 plt.hlines(18, 0, len(time), colors='k', linestyles='dashed')
 plt.hlines(24, 0, len(time), colors='k', linestyles='dashed')
 plt.title('Server Temperature Comparison')
-plt.legend(('AKKA AI', 'No AI'))
+plt.legend(('AKKA AI', 'No AI', 'Free System'))
 plt.xlabel('time [min]')
 plt.ylabel('T_server [°C]')
 
