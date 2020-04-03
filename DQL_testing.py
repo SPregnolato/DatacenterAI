@@ -49,8 +49,8 @@ mse_T_ai = 0
 mse_T_noai = 0
 E_AI = []
 E_NO_AI = []
-for timestep in tqdm(range(0, 5 * 30 * 24 * 60)):
-# for timestep in tqdm(range(0, 24*60)):
+for timestep in tqdm(range(0, 3 * 30 * 24 * 60)):
+# for timestep in tqdm(range(0, 24*60*10)):
     q_values = model.predict(current_state)
     action = np.argmax(q_values[0])
     actions.append((action - direction_boundary) * temperature_step)
@@ -93,13 +93,13 @@ print("\nFailing: {:.2f}%".format(env.range_error/timestep*100))
 plt.figure()
 plt.subplot(2,3,1)
 plt.grid(True)
+plt.plot(FREE_T)
 plt.plot(AI_T)
 plt.plot(NO_AI_T)
-plt.plot(FREE_T)
 plt.hlines(18, 0, len(time), colors='k', linestyles='dashed')
 plt.hlines(24, 0, len(time), colors='k', linestyles='dashed')
 plt.title('Server Temperature Comparison')
-plt.legend(('AKKA AI', 'No AI', 'Free System'))
+plt.legend(('Free System', 'AKKA AI', 'No AI'))
 plt.xlabel('time [min]')
 plt.ylabel('T_server [°C]')
 

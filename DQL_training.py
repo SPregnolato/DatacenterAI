@@ -1,35 +1,34 @@
-
 #TRAINING THE AI
 
 #Installing Keras
 # conda install -c conda-forge keras
 
 #Libraries
-
 import numpy as np
 import DQL_environment
 import DQL_brain
 import DQL_dqn
 import matplotlib.pyplot as plt
-from keras.optimizers import Adam
+from keras.optimizers import Adam, RMSprop
 import keras.backend as K
 import pickle
-from tqdm import tqdm
 import scipy.special as ssp
+
 
 #Setting Parameters
 number_epochs = 1000
 epoch_len = 2 * 30 * 24 * 60   
 learning_rate = 0.01
-loss_f = 'huber_loss'  # <---- check delta parameter
-decay = 1e-2 / number_epochs
-opt = Adam(learning_rate=learning_rate, decay=decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
-max_memory = epoch_len
-batch_size = 300
+loss_f = 'huber_loss'  # huber_loss <---- check delta parameter
+decay = 1e-1 / number_epochs
+# opt = Adam(learning_rate=learning_rate, decay=decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
+opt = RMSprop(learning_rate=0.001, rho=0.9)
+max_memory = 30 * 24 * 60 
+batch_size = 500
 
 r_hat = 0 
-beta = 0.01 # avg reward step --> consider 0.001
-discount = 0.99 # discount factor
+beta = 0.005 # avg reward step --> consider 0.001
+discount = 0.8 # discount factor
 
 number_actions = 7
 direction_boundary = (number_actions - 1) / 2
@@ -64,6 +63,7 @@ losses_plot = []
 AVG_losses_plot = []
 r_hat_plot = []
 plt.figure()
+
 if (env.train):
     # Loop over Epochs (1 Epoch = 2 Months)
     for epoch in range(1, number_epochs+1):
@@ -82,7 +82,7 @@ if (env.train):
         #Loop over Timesteps (1 Timestep = 1 Minute) in one Epoch
         for timestep in range(epoch_len):
             if not game_over:
-                #Choose action a (softmax)
+                #Choose action a (softmax) + AVG Q
                 q_values = model.predict(current_state)[0]
                 probs = ssp.softmax(q_values)
                 action = np.random.choice(number_actions, p = probs)     
@@ -111,7 +111,8 @@ if (env.train):
                 dqn.remember([current_state, action, reward, next_state, r_hat], game_over)
                 
                 #Gathering Inputs and Targets in separate Batches
-                inputs, targets = dqn.get_batch(model, batch_size)             
+                inputs, targets = dqn.get_batch(model, batch_size, r_hat)    
+                          
                 
                 #Compute the loss over the all Batches 
                 loss += model.train_on_batch(inputs, targets)

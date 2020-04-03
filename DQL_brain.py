@@ -16,9 +16,9 @@ class Brain(object):
         states = Input(shape = (number_states,))
         
         #Hidden layers
-        x = Dense(units = 30, activation = 'relu')(states)
+        x = Dense(units = 60, activation = 'relu')(states)
         x = Dropout(rate = 0.1)(x)
-        y = Dense(units = 30, activation = 'relu')(x)
+        y = Dense(units = 60, activation = 'relu')(x)
         y = Dropout(rate = 0.1)(y)
         #Output layer
         # q_values = Dense(units = number_actions, activation = 'tanh')(y)
