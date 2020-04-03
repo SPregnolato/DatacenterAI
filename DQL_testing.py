@@ -57,7 +57,7 @@ for timestep in tqdm(range(0, 5 * 30 * 24 * 60)):
     else:
         direction = 1
     energy_ai = abs(action - direction_boundary) * temperature_step
-    next_state, reward, game_over = env.update_env(direction, energy_ai, max_energy, int(timestep / (30*24*60)))
+    next_state, reward, game_over = env.update_env(direction, energy_ai, max_energy, int(timestep / (30*24*60)), timestep)
     ai_T = env.temperature_ai
     no_ai_T = env.temperature_noai
     AI_T.append(ai_T)

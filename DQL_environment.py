@@ -42,7 +42,7 @@ class Environment(object):
         self.range_error = 0
 
     # Method to update the environment object right after the AI (agent) plays the action
-    def update_env(self, direction, energy_ai, max_energy, month):
+    def update_env(self, direction, energy_ai, max_energy, month, timestep):
         
         # energy_no_ai 
         energy_noai = 0
@@ -84,9 +84,15 @@ class Environment(object):
         # Reward
         if (self.temperature_ai >= self.optimal_temperature[0]) and (self.temperature_ai <= self.optimal_temperature[1]):
             self.reward = 1 - (energy_ai / (2*max_energy))
+            # reward ideas
+            # 1) self.reward = 1 - (energy_ai / (2*max_energy))
+            # 2) self.reward = 2 - (energy_ai / (2*max_energy)) + np.clip(np.log((self.total_energy_noai+1) / (self.total_energy_ai+1)), -0.5, 0.5)
+            # 3) self.reward = 1 - (energy_ai / (2*max_energy)) - (self.total_energy_ai / (2*(timestep+1) * max_energy))
         else:
-            self.reward = 0 
-        
+            self.reward = -0.1 
+            #reward ideas
+            # 1) self.reward = -0.1 
+            # 2) self.reward = -0.1 - (energy_ai / (4*max_energy))
         
         
         # Exit Conditions 
