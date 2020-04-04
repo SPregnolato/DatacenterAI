@@ -9,7 +9,7 @@ import DQL_environment
 import DQL_brain
 import DQL_dqn
 import matplotlib.pyplot as plt
-from keras.optimizers import Adam, RMSprop
+from keras.optimizers import Adam
 import keras.backend as K
 import pickle
 import scipy.special as ssp
@@ -18,17 +18,18 @@ import scipy.special as ssp
 #Setting Parameters
 number_epochs = 1000
 epoch_len = 2 * 30 * 24 * 60   
-learning_rate = 0.01
+learning_rate = 0.001
 loss_f = 'huber_loss'  # huber_loss <---- check delta parameter
-decay = 1e-1 / number_epochs
-# opt = Adam(learning_rate=learning_rate, decay=decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
-opt = RMSprop(learning_rate=0.001, rho=0.9)
+opt = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, amsgrad=False)
+
 max_memory = 30 * 24 * 60 
-batch_size = 500
+batch_size = 300
 
 r_hat = 0 
 beta = 0.005 # avg reward step --> consider 0.001
-discount = 0.8 # discount factor
+discount = 1 # discount factor
+tau_soft = .3 #temperature softmax
+
 
 number_actions = 7
 direction_boundary = (number_actions - 1) / 2
@@ -60,6 +61,7 @@ rew_plot = []
 AVG_rew_plot = []
 AVG_rew_plot_2 = []
 losses_plot = []
+epoch_plot = []
 AVG_losses_plot = []
 r_hat_plot = []
 plt.figure()
@@ -84,7 +86,7 @@ if (env.train):
             if not game_over:
                 #Choose action a (softmax) + AVG Q
                 q_values = model.predict(current_state)[0]
-                probs = ssp.softmax(q_values)
+                probs = ssp.softmax(q_values/tau_soft - max(q_values/tau_soft))
                 action = np.random.choice(number_actions, p = probs)     
                 # q_values = model.predict(current_state)[0]
                 # action = np.random.choice(number_actions, p = q_values )     
@@ -135,16 +137,15 @@ if (env.train):
     
         #Printing training result for each Epoch
         print("\n\n")
-        print("Epoch: {:03d}/{:03d} (t = {}')".format(epoch, number_epochs, timestep))
+        print("Epoch: {:03d}/{:03d} (t = {}', R_tot: {:.2f})".format(epoch, number_epochs, timestep, total_reward))
         print("Energy spent with an AI: {:.0f}".format(env.total_energy_ai))
         print("Energy spent with No AI: {:.0f}".format(env.total_energy_noai))
         print("\nTime in range AI: {:.2f}".format(t_in_ai/timestep))
         print("Time in range No AI: {:.2f}".format(t_in_noai/timestep))
         print("\nTemperature mse AI: {:.2f}".format(mse_T_ai/timestep))
         print("Temperature mse No AI: {:.2f}".format(mse_T_noai/timestep))
-        print("\nR_tot: {:.2f}, R_mean: {:.2f}, R_hat: {:.2f}".format(total_reward, total_reward/timestep, r_hat))
-        print("Cost_tot: {:.2f}, Cost_mean: {:.2f}".format(loss, loss/timestep*100))
-        print("Learning Rate: {:.2E}".format(K.eval((brain.model.optimizer.lr))))
+        print("\n,R_mean: {:.2f}, R_hat: {:.2f}".format(total_reward/timestep, r_hat))
+      
         
         #Performance plot
         rew_plot.append(total_reward)
@@ -152,6 +153,7 @@ if (env.train):
         AVG_rew_plot_2.append((total_reward-reward)/timestep)
         losses_plot.append(loss)
         AVG_losses_plot.append(loss/timestep)
+        epoch_plot.append(timestep)
         if epoch % 25 == 0:
             plt.subplot(2,3,1)
             plt.plot(rew_plot)
@@ -168,14 +170,14 @@ if (env.train):
             plt.subplot(2,3,3)
             plt.plot(AVG_rew_plot_2)
             plt.xlabel("epochs")
-            plt.ylabel("r_avg")
+            plt.ylabel("r_avg2")
             plt.title("Relative Reward - (no Rend)")
             
             plt.subplot(2,3,4)
-            plt.plot(losses_plot)
+            plt.plot(epoch_plot)
             plt.xlabel("epochs")
-            plt.ylabel("J")
-            plt.title("Cost")
+            plt.ylabel("timesteps")
+            plt.title("Episode Length")
             
             plt.subplot(2,3,5)
             plt.plot(AVG_losses_plot)

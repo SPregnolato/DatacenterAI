@@ -13,11 +13,6 @@ class DQN(object):
     #Methods to build the memory in Experience Replay
     def remember(self, transition, game_over):
         self.memory.append([transition, game_over])
-    # def remember(self, transition, game_over):
-    #     self.memory.append([transition, game_over])
-    #     if len(self.memory) > self.max_memory:
-    #         del self.memory[0]
-    
    
     #Methods to build two batches of 10 In and 10 Targes by extracting 10 transition
     # def get_batch(self, model, batch_size):
@@ -34,13 +29,13 @@ class DQN(object):
             targets[i] = model.predict(current_state)[0]
             Q_sa_next = np.max(model.predict(next_state)[0])   
             if game_over:
-                # targets[i, action] = reward - r_hat
+                targets[i, action] = reward - r_hat
                 # targets[i, action] = reward - r_hat_i
-                targets[i, action] = reward 
+                # targets[i, action] = reward 
             else:
-                # targets[i, action] = reward - r_hat + self.discount * Q_sa_next
+                targets[i, action] = reward - r_hat + self.discount * Q_sa_next
                 # targets[i, action] = reward - r_hat_i + self.discount * Q_sa_next
-                targets[i, action] = reward + self.discount * Q_sa_next
+                # targets[i, action] = reward + self.discount * Q_sa_next
         return inputs, targets
 
    

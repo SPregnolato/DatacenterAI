@@ -93,13 +93,13 @@ class Environment(object):
             #reward ideas
             # self.reward = -0.1 
             # self.reward = -0.1 - (energy_ai / (4*max_energy))
-            self.reward = - (energy_ai / max_energy)   
+            self.reward = -1 - (energy_ai / max_energy)   
         
         # Exit Conditions 
         if (self.temperature_ai < self.min_temperature):
             if (self.train == 1):
                 self.game_over = 1
-                self.reward = -10
+                self.reward = -4
                 # self.reward = -5
             else:
                 # print('Error - Tmin')
@@ -109,7 +109,7 @@ class Environment(object):
         elif (self.temperature_ai > self.max_temperature):
             if (self.train == 1):
                 self.game_over = 1
-                self.reward = -10
+                self.reward = -4
                 # self.reward = -5
             else:
                 # print('Error - Tmax')
