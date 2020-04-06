@@ -144,8 +144,8 @@ if (env.train):
         print("Time in range No AI: {:.2f}".format(t_in_noai/timestep))
         print("\nTemperature mse AI: {:.2f}".format(mse_T_ai/timestep))
         print("Temperature mse No AI: {:.2f}".format(mse_T_noai/timestep))
-        print("\n,R_mean: {:.2f}, R_hat: {:.2f}".format(total_reward/timestep, r_hat))
-      
+        print("\nR_mean: {:.2f}, R_hat: {:.2f}".format(total_reward/timestep, r_hat))
+        print("J_mean: {:.2f}".format(loss/timestep*100))
         
         #Performance plot
         rew_plot.append(total_reward)
@@ -196,7 +196,7 @@ if (env.train):
         batch_memory = dqn.memory 
         last_lr = K.eval((brain.model.optimizer.lr))
         with open("memory.pickle","wb") as f:
-            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, losses_plot, AVG_losses_plot, last_lr], f)
+            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, losses_plot, AVG_losses_plot, r_hat_plot, last_lr], f)
 
 
 
