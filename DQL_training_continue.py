@@ -13,12 +13,15 @@ import matplotlib.pyplot as plt
 file = open('memory.pickle', 'rb')
 
 # dump information to that file
+# pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, losses_plot, last_lr], f)
 data = pickle.load(file)
 rew_plot =data[2] 
 AVG_rew_plot =data[3] 
 AVG_rew_plot_2 = data[4] 
-losses_plot = data[5]
-AVG_losses_plot  =data[6]
+epoch_plot = data[5]
+AVG_losses_plot = data[6]
+r_hat_plot = data[7]
+losses_plot = data[8]
 
 plt.figure()
 plt.subplot(2,3,1)
@@ -40,16 +43,22 @@ plt.ylabel("r_avg2")
 plt.title("Relative Reward - (no Rend)")
 
 plt.subplot(2,3,4)
-plt.plot(losses_plot)
+plt.plot(epoch_plot)
 plt.xlabel("epochs")
-plt.ylabel("J")
-plt.title("Cost")
+plt.ylabel("timesteps")
+plt.title("Episode Length")
 
 plt.subplot(2,3,5)
 plt.plot(AVG_losses_plot)
 plt.xlabel("epochs")
 plt.ylabel("J_avg")
 plt.title("Relative Cost")
+
+plt.subplot(2,3,6)
+plt.plot(r_hat_plot)
+plt.xlabel("epochs")
+plt.ylabel("R_hat")
+plt.title("Reward hat")
 
 
 

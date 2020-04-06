@@ -87,9 +87,7 @@ if (env.train):
                 #Choose action a (softmax) + AVG Q
                 q_values = model.predict(current_state)[0]
                 probs = ssp.softmax(q_values/tau_soft - max(q_values/tau_soft))
-                action = np.random.choice(number_actions, p = probs)     
-                # q_values = model.predict(current_state)[0]
-                # action = np.random.choice(number_actions, p = q_values )     
+                action = np.random.choice(number_actions, p = probs)         
                 if (action - direction_boundary < 0):
                     direction = -1
                 else:
@@ -151,9 +149,9 @@ if (env.train):
         rew_plot.append(total_reward)
         AVG_rew_plot.append(total_reward/timestep)
         AVG_rew_plot_2.append((total_reward-reward)/timestep)
-        losses_plot.append(loss)
-        AVG_losses_plot.append(loss/timestep)
         epoch_plot.append(timestep)
+        AVG_losses_plot.append(loss/timestep)
+        losses_plot.append(loss)
         if epoch % 25 == 0:
             plt.subplot(2,3,1)
             plt.plot(rew_plot)
@@ -196,7 +194,7 @@ if (env.train):
         batch_memory = dqn.memory 
         last_lr = K.eval((brain.model.optimizer.lr))
         with open("memory.pickle","wb") as f:
-            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, losses_plot, AVG_losses_plot, r_hat_plot, last_lr], f)
+            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, losses_plot, last_lr], f)
 
 
 
