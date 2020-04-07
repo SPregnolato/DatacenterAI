@@ -22,8 +22,11 @@ learning_rate = 0.001
 loss_f = 'huber_loss'  # huber_loss <---- check delta parameter
 opt = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, amsgrad=False)
 
-max_memory = 30 * 24 * 60 
-batch_size = 300
+# max_memory = 30 * 24 * 60 
+max_memory = 3 * 24 * 60
+# batch_size = 300
+batch_size = 100
+
 
 r_hat = 0 
 beta = 0.005 # avg reward step --> consider 0.001
@@ -153,6 +156,8 @@ if (env.train):
         AVG_losses_plot.append(loss/timestep)
         losses_plot.append(loss)
         if epoch % 25 == 0:
+            model.save("modelBVSO"+str(epoch)+".h5")
+            
             plt.subplot(2,3,1)
             plt.plot(rew_plot)
             plt.xlabel("epochs")
@@ -161,33 +166,34 @@ if (env.train):
             
             plt.subplot(2,3,2)
             plt.plot(AVG_rew_plot)
-            plt.xlabel("epochs")
+            # plt.xlabel("epochs")
             plt.ylabel("r_avg")      
             plt.title("Relative reward")
             
             plt.subplot(2,3,3)
             plt.plot(AVG_rew_plot_2)
-            plt.xlabel("epochs")
+            # plt.xlabel("epochs")
             plt.ylabel("r_avg2")
             plt.title("Relative Reward - (no Rend)")
             
             plt.subplot(2,3,4)
             plt.plot(epoch_plot)
-            plt.xlabel("epochs")
+            # plt.xlabel("epochs")
             plt.ylabel("timesteps")
             plt.title("Episode Length")
             
             plt.subplot(2,3,5)
             plt.plot(AVG_losses_plot)
-            plt.xlabel("epochs")
+            # plt.xlabel("epochs")
             plt.ylabel("J_avg")
             plt.title("Relative Cost")
             
             plt.subplot(2,3,6)
             plt.plot(r_hat_plot)
-            plt.xlabel("epochs")
+            # plt.xlabel("epochs")
             plt.ylabel("R_hat")
             plt.title("Reward hat")
+            
             
         #Saving the model
         model.save("modelBVSO.h5")

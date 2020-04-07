@@ -16,14 +16,14 @@ class Brain(object):
         states = Input(shape = (number_states,))
         
         #Hidden layers
-        x = Dense(units = 60, activation = 'relu')(states)
+        x = Dense(units = 60, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(states)
         x = Dropout(rate = 0.1)(x)
-        y = Dense(units = 60, activation = 'relu')(x)
+        y = Dense(units = 60, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(x)
         y = Dropout(rate = 0.1)(y)
         #Output layer
         # q_values = Dense(units = number_actions, activation = 'tanh')(y)
         # q_values = Dense(units = number_actions, activation = 'softmax')(y)
-        q_values = Dense(units = number_actions, activation = 'linear')(y)
+        q_values = Dense(units = number_actions, activation = 'linear', kernel_initializer='he_normal', bias_initializer='zeros')(y)
         
         
         #Assembling the full architecture in a model object (object variable)

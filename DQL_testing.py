@@ -29,8 +29,8 @@ optimal_temperature = (20.0, 24.0)
 env = DQL_environment.Environment(optimal_temperature = optimal_temperature, initial_month = 0, initial_number_users = 20, initial_rate_data = 30, max_energy = max_energy)
 
 #Loading pre trained model (parameters: weights)
-model = load_model("modelBVSO.h5")
-
+# model = load_model("modelBVSO.h5")
+model = load_model("modelBVSO175.h5")
 #Inference mode
 train = False
 
@@ -49,7 +49,7 @@ mse_T_ai = 0
 mse_T_noai = 0
 E_AI = []
 E_NO_AI = []
-for timestep in tqdm(range(0, 3 * 30 * 24 * 60)):
+for timestep in tqdm(range(0, 1 * 30 * 24 * 60)):
 # for timestep in tqdm(range(0, 24*60*10)):
     q_values = model.predict(current_state)
     action = np.argmax(q_values[0])
