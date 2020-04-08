@@ -13,10 +13,10 @@ import DQL_environment
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-#Setting seeds for reproducibility
-os.environ['PYTHONHASHSEED'] = '0'
-np.random.seed(42)
-rn.seed(12345)
+# #Setting seeds for reproducibility
+# os.environ['PYTHONHASHSEED'] = '0'
+# np.random.seed(42)
+# rn.seed(12345)
 
 #Setting Parameters
 number_actions = 7
@@ -30,7 +30,8 @@ env = DQL_environment.Environment(optimal_temperature = optimal_temperature, ini
 
 #Loading pre trained model (parameters: weights)
 # model = load_model("modelBVSO.h5")
-model = load_model("modelBVSO175.h5")
+model = load_model("modelBVSOmax.h5")
+
 #Inference mode
 train = False
 

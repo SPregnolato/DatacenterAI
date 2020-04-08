@@ -30,11 +30,11 @@ class DQN(object):
             Q_sa_next = np.max(model.predict(next_state)[0])   
             if game_over:
                 targets[i, action] = reward - r_hat
-                # targets[i, action] = reward - r_hat_i
+                # targets[i, action] = (reward - r_hat) / 10  # 10 = (max reward-min_reward)
                 # targets[i, action] = reward 
             else:
                 targets[i, action] = reward - r_hat + self.discount * Q_sa_next
-                # targets[i, action] = reward - r_hat_i + self.discount * Q_sa_next
+                # targets[i, action] = (reward - r_hat) / 10 + self.discount * Q_sa_next
                 # targets[i, action] = reward + self.discount * Q_sa_next
         return inputs, targets
 

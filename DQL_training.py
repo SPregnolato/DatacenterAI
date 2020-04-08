@@ -18,20 +18,21 @@ import scipy.special as ssp
 #Setting Parameters
 number_epochs = 1000
 epoch_len = 2 * 30 * 24 * 60   
-learning_rate = 0.001
+learning_rate = 0.005
+decay = 1e-4
 loss_f = 'huber_loss'  # huber_loss <---- check delta parameter
-opt = Adam(learning_rate=learning_rate, beta_1=0.9, beta_2=0.999, amsgrad=False)
+opt = Adam(learning_rate=learning_rate, decay = decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
 
 # max_memory = 30 * 24 * 60 
 max_memory = 3 * 24 * 60
 # batch_size = 300
-batch_size = 100
+batch_size = 2**10
 
 
 r_hat = 0 
 beta = 0.005 # avg reward step --> consider 0.001
-discount = 1 # discount factor
-tau_soft = .3 #temperature softmax
+discount = 0.99 # discount factor
+tau_soft = .1 #temperature softmax
 
 
 number_actions = 7
@@ -60,6 +61,7 @@ train = True
 env.train = train
 model = brain.model
 
+timestep_max = 0
 rew_plot = []
 AVG_rew_plot = []
 AVG_rew_plot_2 = []
@@ -67,6 +69,7 @@ losses_plot = []
 epoch_plot = []
 AVG_losses_plot = []
 r_hat_plot = []
+performance_plot = []
 plt.figure()
 
 if (env.train):
@@ -89,7 +92,8 @@ if (env.train):
             if not game_over:
                 #Choose action a (softmax) + AVG Q
                 q_values = model.predict(current_state)[0]
-                probs = ssp.softmax(q_values/tau_soft - max(q_values/tau_soft))
+                q_values_norm = q_values / np.linalg.norm(q_values)
+                probs = ssp.softmax(q_values_norm/tau_soft - max(q_values_norm/tau_soft))
                 action = np.random.choice(number_actions, p = probs)         
                 if (action - direction_boundary < 0):
                     direction = -1
@@ -105,9 +109,9 @@ if (env.train):
                 #AVG reward update
                 q_hat = q_values[action]
                 next_q_hat = np.max(model.predict(next_state)[0])
-                delta = reward - r_hat + next_q_hat - q_hat
+                delta = reward - r_hat + discount * next_q_hat - q_hat
                 r_hat += beta * delta
-                r_hat_plot.append(r_hat)
+                
                 
                 
                 #Storing Transition in Memory
@@ -147,7 +151,13 @@ if (env.train):
         print("Temperature mse No AI: {:.2f}".format(mse_T_noai/timestep))
         print("\nR_mean: {:.2f}, R_hat: {:.2f}".format(total_reward/timestep, r_hat))
         print("J_mean: {:.2f}".format(loss/timestep*100))
-        
+        print("Performance: {:.2f}".format((env.total_energy_noai+1)/(env.total_energy_ai+1) + (t_in_ai+1)/(t_in_noai+1) -2))
+        # Max Model
+        if timestep > timestep_max:
+            model.save("modelBVSOmax.h5")
+            timestep_max = timestep
+            
+            
         #Performance plot
         rew_plot.append(total_reward)
         AVG_rew_plot.append(total_reward/timestep)
@@ -155,44 +165,52 @@ if (env.train):
         epoch_plot.append(timestep)
         AVG_losses_plot.append(loss/timestep)
         losses_plot.append(loss)
+        r_hat_plot.append(r_hat)
+        performance_plot.append((env.total_energy_noai+1)/(env.total_energy_ai+1) + (t_in_ai+1)/(t_in_noai+1) - 2)
         if epoch % 25 == 0:
             model.save("modelBVSO"+str(epoch)+".h5")
             
-            plt.subplot(2,3,1)
+            plt.subplot(3,3,1)
             plt.plot(rew_plot)
-            plt.xlabel("epochs")
+            plt.xlabel("epoch")
             plt.ylabel("r")
             plt.title("Reward")
             
-            plt.subplot(2,3,2)
+            plt.subplot(3,3,2)
             plt.plot(AVG_rew_plot)
-            # plt.xlabel("epochs")
+            plt.xlabel("epoch")
             plt.ylabel("r_avg")      
             plt.title("Relative reward")
             
-            plt.subplot(2,3,3)
+            plt.subplot(3,3,3)
             plt.plot(AVG_rew_plot_2)
-            # plt.xlabel("epochs")
+            plt.xlabel("epoch")
             plt.ylabel("r_avg2")
             plt.title("Relative Reward - (no Rend)")
             
-            plt.subplot(2,3,4)
+            plt.subplot(3,3,4)
             plt.plot(epoch_plot)
-            # plt.xlabel("epochs")
+            plt.xlabel("epoch")
             plt.ylabel("timesteps")
             plt.title("Episode Length")
             
-            plt.subplot(2,3,5)
+            plt.subplot(3,3,5)
             plt.plot(AVG_losses_plot)
-            # plt.xlabel("epochs")
+            plt.xlabel("epochs")
             plt.ylabel("J_avg")
             plt.title("Relative Cost")
             
-            plt.subplot(2,3,6)
+            plt.subplot(3,3,6)
             plt.plot(r_hat_plot)
-            # plt.xlabel("epochs")
+            plt.xlabel("epoch")
             plt.ylabel("R_hat")
             plt.title("Reward hat")
+            
+            plt.subplot(3,3,7)
+            plt.plot(performance_plot)
+            plt.xlabel("epoch")
+            plt.ylabel("Pidx")
+            plt.title("Performance Index")
             
             
         #Saving the model
@@ -200,7 +218,7 @@ if (env.train):
         batch_memory = dqn.memory 
         last_lr = K.eval((brain.model.optimizer.lr))
         with open("memory.pickle","wb") as f:
-            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, losses_plot, last_lr], f)
+            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, performance_plot, losses_plot, last_lr], f)
 
 
 
