@@ -6,8 +6,7 @@
 #Libraries
 import numpy as np
 import DQL_environment
-import DQL_brain
-import DQL_dqn
+import DQL_agent
 import matplotlib.pyplot as plt
 from keras.optimizers import Adam
 import keras.backend as K
@@ -19,21 +18,17 @@ import scipy.special as ssp
 number_epochs = 1000
 epoch_len = 2 * 30 * 24 * 60   
 learning_rate = 0.005
-decay = 1e-4
+decay = 1e-6
 loss_f = 'huber_loss'  # huber_loss <---- check delta parameter
 opt = Adam(learning_rate=learning_rate, decay = decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
 
-# max_memory = 30 * 24 * 60 
-max_memory = 3 * 24 * 60
-# batch_size = 300
-batch_size = 2**10
+max_memory = 2**10
+batch_size = 2**9
 
-
-r_hat = 0 
+r_hat = 0
 beta = 0.005 # avg reward step --> consider 0.001
-discount = 0.99 # discount factor
-tau_soft = .1 #temperature softmax
-
+discount = .999 # discount factor
+tau_soft = .015 #temperature softmax
 
 number_actions = 7
 direction_boundary = (number_actions - 1) / 2
@@ -42,25 +37,22 @@ max_energy = direction_boundary * temperature_step
 optimal_temperature = (20.0, 24.0)
 
 
-#Building the environment
+# Building the environment
 env = DQL_environment.Environment(optimal_temperature = optimal_temperature, initial_month = 0, initial_number_users = 20, initial_rate_data = 30, max_energy = max_energy)
+env.train = True
 current_state, _, _ = env.observe()
 number_states = current_state.shape[1]
 
 
-#Building the brain
-brain = DQL_brain.Brain(learning_rate, number_actions, number_states,  loss_f, opt)
+# Building the Policy (neural network)
+model = DQL_agent.Brain(learning_rate, number_actions, number_states,  loss_f, opt).model
+ 
 
-
-#Building the model
-dqn = DQL_dqn.DQN(max_memory = max_memory, discount = discount)
+#Building the RL algorithm
+dqn = DQL_agent.DQN(max_memory = max_memory, discount = discount)
 
 
 #Training the AI
-train = True
-env.train = train
-model = brain.model
-
 timestep_max = 0
 rew_plot = []
 AVG_rew_plot = []
@@ -90,18 +82,26 @@ if (env.train):
         #Loop over Timesteps (1 Timestep = 1 Minute) in one Epoch
         for timestep in range(epoch_len):
             if not game_over:
-                #Choose action a (softmax) + AVG Q
+                # Choose action a (softmax) + AVG Q
                 q_values = model.predict(current_state)[0]
-                q_values_norm = q_values / np.linalg.norm(q_values)
+                q_values_norm = q_values / np.sqrt(np.sum(q_values**2))
                 probs = ssp.softmax(q_values_norm/tau_soft - max(q_values_norm/tau_soft))
-                action = np.random.choice(number_actions, p = probs)         
+                if max(probs) > 0.99:
+                    eps = np.random.rand()
+                    if eps > 0.8:
+                        action = np.random.choice(number_actions)
+                    else:
+                        action = np.random.choice(number_actions, p = probs)     
+                else:
+                    action = np.random.choice(number_actions, p = probs)   
+                
+                    
+                #Environment update: next state
                 if (action - direction_boundary < 0):
                     direction = -1
                 else:
                     direction = 1
                 energy_ai = abs(action - direction_boundary) * temperature_step
-                    
-                #Environment update: next state
                 actual_month = new_month + int(timestep / (30*24*60))
                 next_state, reward, game_over = env.update_env(direction, energy_ai, max_energy, actual_month, timestep)
                 total_reward += reward
@@ -111,8 +111,6 @@ if (env.train):
                 next_q_hat = np.max(model.predict(next_state)[0])
                 delta = reward - r_hat + discount * next_q_hat - q_hat
                 r_hat += beta * delta
-                
-                
                 
                 #Storing Transition in Memory
                 dqn.remember([current_state, action, reward, next_state, r_hat], game_over)
@@ -127,7 +125,7 @@ if (env.train):
                 # s --> s'
                 current_state = next_state
                 
-                #Performance metrics
+                # Performance metrics
                 # inrange time
                 if env.temperature_ai >= optimal_temperature[0] and env.temperature_ai <= optimal_temperature[1] :
                     t_in_ai += 1
@@ -141,6 +139,7 @@ if (env.train):
                 break
     
         #Printing training result for each Epoch
+        pidx = np.tanh((env.total_energy_noai+1)/(env.total_energy_ai+1)) + np.tanh((t_in_ai+1)/(t_in_noai+1)) -2
         print("\n\n")
         print("Epoch: {:03d}/{:03d} (t = {}', R_tot: {:.2f})".format(epoch, number_epochs, timestep, total_reward))
         print("Energy spent with an AI: {:.0f}".format(env.total_energy_ai))
@@ -151,7 +150,7 @@ if (env.train):
         print("Temperature mse No AI: {:.2f}".format(mse_T_noai/timestep))
         print("\nR_mean: {:.2f}, R_hat: {:.2f}".format(total_reward/timestep, r_hat))
         print("J_mean: {:.2f}".format(loss/timestep*100))
-        print("Performance: {:.2f}".format((env.total_energy_noai+1)/(env.total_energy_ai+1) + (t_in_ai+1)/(t_in_noai+1) -2))
+        print("Performance: {:.2f}".format(pidx))
         # Max Model
         if timestep > timestep_max:
             model.save("modelBVSOmax.h5")
@@ -166,7 +165,7 @@ if (env.train):
         AVG_losses_plot.append(loss/timestep)
         losses_plot.append(loss)
         r_hat_plot.append(r_hat)
-        performance_plot.append((env.total_energy_noai+1)/(env.total_energy_ai+1) + (t_in_ai+1)/(t_in_noai+1) - 2)
+        performance_plot.append(pidx)
         if epoch % 25 == 0:
             model.save("modelBVSO"+str(epoch)+".h5")
             
@@ -216,7 +215,7 @@ if (env.train):
         #Saving the model
         model.save("modelBVSO.h5")
         batch_memory = dqn.memory 
-        last_lr = K.eval((brain.model.optimizer.lr))
+        last_lr = K.eval((model.optimizer.lr))
         with open("memory.pickle","wb") as f:
             pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, performance_plot, losses_plot, last_lr], f)
 

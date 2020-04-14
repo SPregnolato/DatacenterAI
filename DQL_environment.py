@@ -73,7 +73,7 @@ class Environment(object):
             self.current_rate_data = self.min_rate_data
         past_intrinsic_temperature = self.intrinsic_temperature
     
-        self.intrinsic_temperature = self.atmospheric_temperature + self.kmodel  * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
+        self.intrinsic_temperature = self.atmospheric_temperature + self.kmodel * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
         self.delta_intrinsic_temperature = self.intrinsic_temperature - past_intrinsic_temperature
         if (direction == -1):
             delta_temperature_ai = -energy_ai
@@ -86,14 +86,14 @@ class Environment(object):
         if (self.temperature_ai >= self.optimal_temperature[0]) and (self.temperature_ai <= self.optimal_temperature[1]):
             
             # reward ideas
-            self.reward = 2 - (energy_ai / max_energy)
+            self.reward = 1 * (2 - (energy_ai / max_energy))
             # self.reward = 2 - (energy_ai / (max_energy))
             # self.reward = 2 - (energy_ai / (2*max_energy)) + np.clip(np.log((self.total_energy_noai+1) / (self.total_energy_ai+1)), -0.5, 0.5)
             # self.reward = 2 - (energy_ai / (2*max_energy)) - (self.total_energy_ai / ((timestep+1) * max_energy))
         else:
             #reward ideas
             self.reward = -1 - (energy_ai / max_energy) 
-            # self.reward = -0.1 
+            # self.reward = 0
             # self.reward = -0.1 - (energy_ai / (4*max_energy))
            
         
@@ -118,7 +118,10 @@ class Environment(object):
                 self.range_error += 1
                 self.temperature_ai = self.optimal_temperature[1] 
                 self.total_energy_ai += self.temperature_ai - self.optimal_temperature[1]
-     
+
+        
+        
+        
         # Scores
         self.total_energy_ai += energy_ai
         self.total_energy_noai += energy_noai

@@ -1,11 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sun Apr  5 00:07:09 2020
-
-@author: spreg
-"""
-
-
 import pickle
 import matplotlib.pyplot as plt
 

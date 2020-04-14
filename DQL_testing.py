@@ -1,24 +1,12 @@
-
 # TESTING the AI
-
-#Installing Keras
-# conda install -c conda-forge keras
-#Libraries
-
-import os
 import numpy as np
-import random as rn
 from keras.models import load_model
 import DQL_environment
 import matplotlib.pyplot as plt
 from tqdm import tqdm
 
-# #Setting seeds for reproducibility
-# os.environ['PYTHONHASHSEED'] = '0'
-# np.random.seed(42)
-# rn.seed(12345)
 
-#Setting Parameters
+# Setting Parameters
 number_actions = 7
 direction_boundary = (number_actions - 1) / 2
 temperature_step = 1.5
@@ -29,8 +17,8 @@ optimal_temperature = (20.0, 24.0)
 env = DQL_environment.Environment(optimal_temperature = optimal_temperature, initial_month = 0, initial_number_users = 20, initial_rate_data = 30, max_energy = max_energy)
 
 #Loading pre trained model (parameters: weights)
-# model = load_model("modelBVSO.h5")
-model = load_model("modelBVSOmax.h5")
+model = load_model("modelBVSO100.h5")
+# model = load_model("modelBVSOmax.h5")
 
 #Inference mode
 train = False
