@@ -1,5 +1,5 @@
-from keras.layers import Input, Dense, Dropout, BatchNormalization
-from keras.models import Model, Sequential
+from keras.layers import Input, Dense, Dropout
+from keras.models import Model
 from keras.optimizers import Adam
 import numpy as np
 from collections import deque
@@ -16,10 +16,10 @@ class Brain():
         states = Input(shape = (number_states,))
         
         # Hidden layers
-        x = Dense(units = 64, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(states)
+        x = Dense(units = 32, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(states)
         x = Dropout(rate = 0.1)(x)
      
-        y = Dense(units = 64, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(x)
+        y = Dense(units = 32, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(x)
         y = Dropout(rate = 0.1)(y)
         
         # Output layer

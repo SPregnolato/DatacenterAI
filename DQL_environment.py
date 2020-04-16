@@ -40,7 +40,10 @@ class Environment(object):
         self.game_over = 0
         self.train = 1
         self.range_error = 0
-        self.delta_intrinsic_temperature = 0
+        self.delta_intrinsic_temperature = 0.0
+        self.prev_scaled_temperature_ai = 0.0
+        self.prev_scaled_number_users = 0.0
+        self.prev_scaled_rate_data = 0.0
 
     # Method to update the environment object right after the AI (agent) plays the action
     def update_env(self, direction, energy_ai, max_energy, month, timestep):
@@ -71,8 +74,8 @@ class Environment(object):
             self.current_rate_data = self.max_rate_data
         elif (self.current_rate_data < self.min_rate_data):
             self.current_rate_data = self.min_rate_data
+            
         past_intrinsic_temperature = self.intrinsic_temperature
-    
         self.intrinsic_temperature = self.atmospheric_temperature + self.kmodel * (1.25 * self.current_number_users + 1.25 * self.current_rate_data)
         self.delta_intrinsic_temperature = self.intrinsic_temperature - past_intrinsic_temperature
         if (direction == -1):
@@ -83,17 +86,13 @@ class Environment(object):
         self.temperature_noai += self.delta_intrinsic_temperature
         
         # Reward
-        if (self.temperature_ai >= self.optimal_temperature[0]) and (self.temperature_ai <= self.optimal_temperature[1]):
-            
-            # reward ideas
-            self.reward = 1 * (2 - (energy_ai / max_energy))
-            # self.reward = 2 - (energy_ai / (max_energy))
+        if (self.temperature_ai >= self.optimal_temperature[0]) and (self.temperature_ai <= self.optimal_temperature[1]):          
+            self.reward = 1 * (1.2 - (energy_ai / max_energy))
             # self.reward = 2 - (energy_ai / (2*max_energy)) + np.clip(np.log((self.total_energy_noai+1) / (self.total_energy_ai+1)), -0.5, 0.5)
             # self.reward = 2 - (energy_ai / (2*max_energy)) - (self.total_energy_ai / ((timestep+1) * max_energy))
         else:
-            #reward ideas
-            self.reward = -1 - (energy_ai / max_energy) 
-            # self.reward = 0
+            # self.reward = -0.5 - (energy_ai / max_energy) 
+            self.reward = 0
             # self.reward = -0.1 - (energy_ai / (4*max_energy))
            
         
@@ -119,7 +118,7 @@ class Environment(object):
                 self.temperature_ai = self.optimal_temperature[1] 
                 self.total_energy_ai += self.temperature_ai - self.optimal_temperature[1]
 
-        
+        self.reward *= 0.1
         
         
         # Scores
@@ -130,9 +129,13 @@ class Environment(object):
         scaled_temperature_ai = (self.temperature_ai - self.min_temperature) / (self.max_temperature - self.min_temperature)
         scaled_number_users = (self.current_number_users - self.min_number_users) / (self.max_number_users - self.min_number_users)
         scaled_rate_data = (self.current_rate_data - self.min_rate_data) / (self.max_rate_data - self.min_rate_data)
-        next_state = np.matrix( [scaled_temperature_ai, scaled_number_users, scaled_rate_data] )
-        
+        # next_state = np.matrix( [scaled_temperature_ai, scaled_number_users, scaled_rate_data] )
+        next_state = np.matrix([scaled_temperature_ai, scaled_number_users, scaled_rate_data, self.prev_scaled_temperature_ai, self.prev_scaled_number_users, self.prev_scaled_rate_data])
+        self.prev_scaled_temperature_ai = scaled_temperature_ai
+        self.prev_scaled_number_users = scaled_number_users
+        self.prev_scaled_rate_data = scaled_rate_data
         #Returning: reward, next state, exit condition
+        
         return next_state, self.reward, self.game_over
     
     
@@ -159,7 +162,9 @@ class Environment(object):
         scaled_temperature_ai = (self.temperature_ai - self.min_temperature) / (self.max_temperature - self.min_temperature)
         scaled_number_users = (self.current_number_users - self.min_number_users) / (self.max_number_users - self.min_number_users)
         scaled_rate_data = (self.current_rate_data - self.min_rate_data) / (self.max_rate_data - self.min_rate_data)
-        current_state = np.matrix([scaled_temperature_ai, scaled_number_users, scaled_rate_data])
+        # current_state = np.matrix([scaled_temperature_ai, scaled_number_users, scaled_rate_data])
+        current_state = np.matrix([scaled_temperature_ai, scaled_number_users, scaled_rate_data, self.prev_scaled_temperature_ai, self.prev_scaled_number_users, self.prev_scaled_rate_data])
+
         return current_state, self.reward, self.game_over
 
 

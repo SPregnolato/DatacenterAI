@@ -17,7 +17,7 @@ optimal_temperature = (20.0, 24.0)
 env = DQL_environment.Environment(optimal_temperature = optimal_temperature, initial_month = 0, initial_number_users = 20, initial_rate_data = 30, max_energy = max_energy)
 
 #Loading pre trained model (parameters: weights)
-model = load_model("modelBVSO100.h5")
+model = load_model("modelBVSO425.h5")
 # model = load_model("modelBVSOmax.h5")
 
 #Inference mode
