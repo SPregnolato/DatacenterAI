@@ -3,6 +3,30 @@ from keras.models import Model
 from keras.optimizers import Adam
 import numpy as np
 from collections import deque
+import scipy.special as ssp
+
+# POLICY --> TAKE ACTION
+def policy(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step):
+    
+    # prediction
+    q_values = model.predict(current_state)[0]
+    # normalization
+    q_values_norm = (q_values-min(q_values)) / (max(q_values)-min(q_values))
+    # softmax
+    probs = ssp.softmax(q_values_norm/tau_soft - max(q_values_norm/tau_soft))
+    action = np.random.choice(number_actions, p = probs)
+    # q_hat for avg reward update
+    q_hat = q_values[action]
+    # action to energy
+    if (action - direction_boundary < 0):
+        direction = -1
+    else:
+        direction = 1
+    energy_ai = abs(action - direction_boundary) * temperature_step
+
+    return action, q_hat, direction, energy_ai
+
+
 
 
 # BUILDING THE BRAIN
@@ -16,11 +40,14 @@ class Brain():
         states = Input(shape = (number_states,))
         
         # Hidden layers
-        x = Dense(units = 32, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(states)
-        x = Dropout(rate = 0.1)(x)
-     
-        y = Dense(units = 32, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(x)
+        y = Dense(units = 128, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(states)
         y = Dropout(rate = 0.1)(y)
+     
+        # y = Dense(units = 16, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(y)
+        # y = Dropout(rate = 0.1)(y)
+        
+        # y = Dense(units = 16, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(y)
+        # y = Dropout(rate = 0.1)(y)
         
         # Output layer
         q_values = Dense(units = number_actions, activation = 'linear', kernel_initializer='he_normal', bias_initializer='zeros')(y)
