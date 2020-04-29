@@ -6,25 +6,23 @@
 #Libraries
 import numpy as np
 import DQL_environment
-import DQL_agent
+import DQL_agent_PyTorch
 import matplotlib.pyplot as plt
 from keras.optimizers import Adam
 import keras.backend as K
 import pickle
+import torch
+
 
 # Setting Parameters
 number_epochs = 1000
 epoch_len = 2 * 30 * 24 * 60  
  
-learning_rate = 0.01
-decay = 1e-8
-loss_f = 'huber_loss'  # huber_loss <---- check delta parameter
-opt = Adam(learning_rate=learning_rate, decay = decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
 
-max_memory = 2**13
+max_memory = 2**12
 batch_size = 2**10
 
-r_hat = -0.1
+r_hat = -0.2
 beta = 0.01 # avg reward step --> consider 0.001
 discount = 1 # discount factor
 tau_soft = .2 #temperature softmax
@@ -34,7 +32,7 @@ direction_boundary = (number_actions - 1) / 2
 temperature_step = 1.5
 max_energy = direction_boundary * temperature_step
 optimal_temperature = (20.0, 24.0)
-
+avg_optimal_temperature = np.average(optimal_temperature)
 
 # Building the environment
 env = DQL_environment.Environment(optimal_temperature = optimal_temperature, initial_month = 0, initial_number_users = 20, initial_rate_data = 30, max_energy = max_energy)
@@ -42,12 +40,12 @@ env.train = True
 current_state, _, _ = env.observe()
 number_states = current_state.shape[1]
 
-# Building the Policy (neural network)
-model = DQL_agent.Brain(learning_rate, number_actions, number_states,  loss_f, opt).model
+# # Building the Policy (neural network)
+# model = DQL_agent.Brain(learning_rate, number_actions, number_states,  loss_f, opt).model
  
 #Building the RL algorithm
-dqn = DQL_agent.DQN(max_memory = max_memory, discount = discount)
-
+dqn = DQL_agent_PyTorch.DQN(max_memory = max_memory, discount = discount, n_actions = number_actions, n_states = number_states)
+model = dqn.model
 #Training the AI
 timestep_max = 0
 rew_plot = []
@@ -80,7 +78,7 @@ if (env.train):
             if not game_over:
                 
                 # Choose action a (softmax) + AVG Q
-                action, q_hat, direction, energy_ai, q_values, q_values_norm, probs = DQL_agent.policy(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step)
+                action, q_hat, direction, energy_ai = DQL_agent_PyTorch.policy(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step)
                     
                 # Environment update: next state
                 actual_month = new_month + int(timestep / (30*24*60))
@@ -88,19 +86,21 @@ if (env.train):
                 total_reward += reward
                  
                 # AVG reward update
-                next_q_hat = np.max(model.predict(next_state)[0])
+                # Numpy to Torch
+                next_state_t = torch.from_numpy(next_state).float()
+                # prediction
+                next_q_hats_t = model(next_state_t) 
+                #Torch to numpy
+                next_q_hats = next_q_hats_t.detach().numpy().squeeze()
+                next_q_hat = np.max(next_q_hats)
                 delta = reward - r_hat + discount * next_q_hat - q_hat
                 r_hat += beta * delta
                 
-                # Storing Transition in Memory
-                dqn.remember([current_state, action, reward, next_state, r_hat], game_over)
                 
-                # Gathering Inputs and Targets in separate Batches
-                inputs, targets = dqn.get_batch(model, batch_size, r_hat)    
-                          
-                # Compute the loss over the all Batches 
-                loss += model.train_on_batch(inputs, targets)
+                dqn.update(reward, current_state, next_state, action, batch_size)
                 
+
+
                 # s --> s'
                 current_state = next_state
                 
@@ -112,8 +112,8 @@ if (env.train):
                     t_in_noai += 1   
                 
                 # mse from optimal T = 22°
-                mse_T_ai.append(env.temperature_ai - env.avg_optimal_temperature)              
-                mse_T_noai.append(env.temperature_noai - env.avg_optimal_temperature)
+                mse_T_ai.append(env.temperature_ai - avg_optimal_temperature)              
+                mse_T_noai.append(env.temperature_noai - avg_optimal_temperature)
             else:
                 break
     

@@ -12,14 +12,14 @@ direction_boundary = (number_actions - 1) / 2
 temperature_step = 1.5
 max_energy = direction_boundary * temperature_step
 optimal_temperature = (20.0, 24.0)
-avg_optimal_temperature = np.average(optimal_temperature)
+
 
 
 #Building the environment
 env = DQL_environment.Environment(optimal_temperature = optimal_temperature, initial_month = 0, initial_number_users = 20, initial_rate_data = 30, max_energy = max_energy)
 
 #Loading pre trained model (parameters: weights)
-model_name = "modelBVSO450.h5"
+model_name = "modelBVSO375.h5"
 model = load_model(model_name)
 
 
@@ -69,8 +69,8 @@ for timestep in tqdm(range(0, 1 * 30 * 24 * 60)):
     if no_ai_T >= optimal_temperature[0] and no_ai_T <= optimal_temperature[1]:
         inside_NO_AI += 1
     # compute the mse from optimal t 21°
-    mse_T_ai.append(env.temperature_ai - avg_optimal_temperature)              
-    mse_T_noai.append(env.temperature_noai - avg_optimal_temperature)
+    mse_T_ai.append(env.temperature_ai - env.avg_optimal_temperature)              
+    mse_T_noai.append(env.temperature_noai - env.avg_optimal_temperature)
 
     
     
@@ -82,8 +82,8 @@ print(model_name)
 # print("Total Energy spent with an AI: {:.0f}".format(env.total_energy_ai))
 # print("Total Energy spent with no AI: {:.0f}".format(env.total_energy_noai))
 print("ENERGY SAVED: {:.0f} %".format((env.total_energy_noai - env.total_energy_ai) / env.total_energy_noai * 100))
-print("\nTemperature mse AI: {:.2f}".format(mse_T_ai/timestep))
-print("Temperature mse No AI: {:.2f}".format(mse_T_noai/timestep))
+print("\nTemperature mse AI: {:.3f}".format(mse_T_ai/timestep))
+print("Temperature mse No AI: {:.3f}".format(mse_T_noai/timestep))
 print("\nFailing: {:.2f}%".format(env.range_error/timestep*100))
 
 # Plotting the results

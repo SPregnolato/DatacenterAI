@@ -18,6 +18,7 @@ class Environment(object):
         self.atmospheric_temperature = \
         self.monthly_atmospheric_temperatures[initial_month]
         self.optimal_temperature = optimal_temperature
+        self.avg_optimal_temperature = np.average(optimal_temperature)
         self.min_temperature = optimal_temperature[0] - (max_energy + 2)
         self.max_temperature = optimal_temperature[1] + (max_energy + 2)
         self.min_number_users = 10
@@ -87,15 +88,13 @@ class Environment(object):
         
         # Reward
         if (self.temperature_ai >= self.optimal_temperature[0]) and (self.temperature_ai <= self.optimal_temperature[1]):          
-            self.reward = - 2 *(energy_ai / max_energy)
-            # self.reward = 1 * (1.2 - (energy_ai / max_energy))
-            # self.reward = 2 - (energy_ai / (2*max_energy)) + np.clip(np.log((self.total_energy_noai+1) / (self.total_energy_ai+1)), -0.5, 0.5)
-            # self.reward = 2 - (energy_ai / (2*max_energy)) - (self.total_energy_ai / ((timestep+1) * max_energy))
+            self.reward = - 2 * (energy_ai / max_energy)
         else:
-            # self.reward = -0.5 - (energy_ai / max_energy) 
-            self.reward = -20
-            # self.reward = -10 - 5 * (energy_ai / max_energy)
-            # self.reward = -0.1 - (energy_ai / (4*max_energy))
+            if (self.temperature_ai >= self.avg_optimal_temperature):
+                self.reward = -2.5 - 1.5 *(self.temperature_ai - self.optimal_temperature[1])
+            else:
+                self.reward = -2.5 - 1.5 * (self.optimal_temperature[0] - self.temperature_ai)
+
            
         
         # Exit Conditions 
@@ -103,7 +102,7 @@ class Environment(object):
             if (self.train == 1):
                 self.game_over = 1
                 # self.reward = 0
-                self.reward = -50
+                self.reward = -10
             else:
                 # print('Error - Tmin')
                 self.range_error += 1
@@ -113,7 +112,7 @@ class Environment(object):
             if (self.train == 1):
                 self.game_over = 1
                 # self.reward = 0
-                self.reward = -50
+                self.reward = -10
             else:
                 # print('Error - Tmax')
                 self.range_error += 1
@@ -156,6 +155,9 @@ class Environment(object):
         self.train = 1
         self.range_error = 0
         self.delta_intrinsic_temperature = 0
+        self.prev_scaled_temperature_ai = 0.0
+        self.prev_scaled_number_users = 0.0
+        self.prev_scaled_rate_data = 0.0
        
       
     # Method to extract: current state, last reward, exit condition

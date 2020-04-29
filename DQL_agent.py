@@ -11,7 +11,9 @@ def policy(model, current_state, tau_soft, number_actions, direction_boundary, t
     # prediction
     q_values = model.predict(current_state)[0]
     # normalization
-    q_values_norm = (q_values-min(q_values)) / (max(q_values)-min(q_values))
+    # q_values_norm = (q_values-min(q_values)) / (max(q_values)-min(q_values))
+    q_values_norm = (q_values - min(q_values)) / (2 * (max(q_values) - min(q_values))) + 1/2
+    
     # softmax
     probs = ssp.softmax(q_values_norm/tau_soft - max(q_values_norm/tau_soft))
     action = np.random.choice(number_actions, p = probs)
@@ -24,8 +26,7 @@ def policy(model, current_state, tau_soft, number_actions, direction_boundary, t
         direction = 1
     energy_ai = abs(action - direction_boundary) * temperature_step
 
-    return action, q_hat, direction, energy_ai
-
+    return action, q_hat, direction, energy_ai, q_values, q_values_norm, probs
 
 
 
@@ -40,11 +41,11 @@ class Brain():
         states = Input(shape = (number_states,))
         
         # Hidden layers
-        y = Dense(units = 128, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(states)
-        y = Dropout(rate = 0.1)(y)
+        y = Dense(units = 64, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(states)
+        y = Dropout(rate = 0.2)(y)
      
-        # y = Dense(units = 16, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(y)
-        # y = Dropout(rate = 0.1)(y)
+        y = Dense(units = 64, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(y)
+        y = Dropout(rate = 0.2)(y)
         
         # y = Dense(units = 16, activation = 'relu', kernel_initializer='he_normal', bias_initializer='zeros')(y)
         # y = Dropout(rate = 0.1)(y)
