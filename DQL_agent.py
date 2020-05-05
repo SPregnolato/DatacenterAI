@@ -6,7 +6,7 @@ from collections import deque
 import scipy.special as ssp
 
 # POLICY --> TAKE ACTION
-def policy(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step):
+def policy_softmax(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step):
     
     # prediction
     q_values = model.predict(current_state)[0]
@@ -27,6 +27,28 @@ def policy(model, current_state, tau_soft, number_actions, direction_boundary, t
     energy_ai = abs(action - direction_boundary) * temperature_step
 
     return action, q_hat, direction, energy_ai, q_values, q_values_norm, probs
+
+
+def policy_greedy(model, current_state, eps , number_actions, direction_boundary, temperature_step):
+    
+    # prediction
+    q_values = model.predict(current_state)[0]
+    
+
+    # greedy
+    probs = np.ones((1,number_actions)) * eps / number_actions
+    probs[0, np.argmax(q_values)] = 1 - eps + eps / number_actions
+    action = np.random.choice(number_actions, p = probs.squeeze())
+    # q_hat for avg reward update
+    q_hat = q_values[action]
+    # action to energy
+    if (action - direction_boundary < 0):
+        direction = -1
+    else:
+        direction = 1
+    energy_ai = abs(action - direction_boundary) * temperature_step
+
+    return action, q_hat, direction, energy_ai, q_values, probs
 
 
 
@@ -51,8 +73,8 @@ class Brain():
         # y = Dropout(rate = 0.1)(y)
         
         # Output layer
-        q_values = Dense(units = number_actions, activation = 'linear', kernel_initializer='he_normal', bias_initializer='zeros')(y)
-        # q_values = Dense(units = number_actions, activation = 'tanh')(y)
+        # q_values = Dense(units = number_actions, activation = 'linear', kernel_initializer='he_normal', bias_initializer='zeros')(y)
+        q_values = Dense(units = number_actions, activation = 'tanh', kernel_initializer='he_normal', bias_initializer='zeros')(y)
         # q_values = Dense(units = number_actions, activation = 'softmax')(y)
 
         # Assembling the full architecture in a model object (object variable)
@@ -76,7 +98,7 @@ class DQN():
         self.memory.append([transition, game_over])
    
     # Methods to build two batches of 10 In and 10 Targes by extracting 10 transition
-    def get_batch(self, model, batch_size, r_hat):
+    def get_batch(self, model, target_model, batch_size, r_hat):
         len_memory = len(self.memory)
         num_inputs = self.memory[0][0][0].shape[1]
         num_outputs = model.output_shape[-1]
@@ -86,8 +108,10 @@ class DQN():
             current_state, action, reward, next_state, r_hat_i = self.memory[idx][0]
             game_over = self.memory[idx][1]
             inputs[i] = current_state
-            targets[i] = model.predict(current_state)[0]
-            Q_sa_next = np.max(model.predict(next_state)[0])   
+            targets[i] = target_model.predict(current_state)[0]
+            # double dqn
+            a = np.argmax(model.predict(next_state)[0])
+            Q_sa_next = target_model.predict(next_state)[0][a]   
             if game_over:
                 targets[i, action] = reward - r_hat
                 # targets[i, action] = reward 
