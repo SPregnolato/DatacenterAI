@@ -48,7 +48,8 @@ class Environment(object):
         self.prev_scaled_temperature_ai = 0
         self.prev_scaled_number_users = 2 * (self.initial_number_users - self.avg_number_users) / (self.max_number_users - self.min_number_users)
         self.prev_scaled_rate_data = 2 * (self.initial_rate_data - self.avg_rate_data) / (self.max_rate_data - self.min_rate_data)
-
+        self.prev_out=False
+        
     # Method to update the environment object right after the AI (agent) plays the action
     def update_env(self, direction, energy_ai, month, timestep):
         
@@ -93,20 +94,27 @@ class Environment(object):
         
         # Reward
         if (self.temperature_ai >= self.optimal_temperature[0]) and (self.temperature_ai <= self.optimal_temperature[1]):          
-            self.reward = - 5 * (energy_ai / self.max_energy)
+            if self.prev_out:
+                self.reward = 15 - 5 * (energy_ai / self.max_energy)
+                self.prev_out = False
+            else:    
+                self.reward = 50 - 10 * (energy_ai / self.max_energy)
+                self.prev_out = False
         else:
-            if (self.temperature_ai >= self.avg_optimal_temperature):
-                self.reward = -7.5 -2.5 *(self.temperature_ai - self.optimal_temperature[1])
+            self.prev_out = True
+            if (self.temperature_ai > self.avg_optimal_temperature):
+                self.reward = 0  
             else:
-                self.reward = -7.5 - 2.5 * (self.optimal_temperature[0] - self.temperature_ai)
-                
+                self.reward = 0
+            
         
         # Exit Conditions 
         if (self.temperature_ai < self.min_temperature):
             if (self.train == 1):
                 self.game_over = 1
-                # self.reward = 0
-                self.reward = -100
+                self.reward = -10
+                self.prev_out = True
+                # self.reward -= 3
             else:
                 # print('Error - Tmin')
                 self.range_error += 1
@@ -115,8 +123,9 @@ class Environment(object):
         elif (self.temperature_ai > self.max_temperature):
             if (self.train == 1):
                 self.game_over = 1
-                # self.reward = 0
-                self.reward = -100
+                self.reward = -10
+                self.prev_out = True
+                # self.reward -= 3
             else:
                 # print('Error - Tmax')
                 self.range_error += 1
@@ -170,7 +179,7 @@ class Environment(object):
         self.prev_scaled_temperature_ai = 0
         self.prev_scaled_number_users = 2 * (self.initial_number_users - self.avg_number_users) / (self.max_number_users - self.min_number_users)
         self.prev_scaled_rate_data = 2 * (self.initial_rate_data - self.avg_rate_data) / (self.max_rate_data - self.min_rate_data)
-
+        self.prev_out = False
        
       
     # Method to extract: current state, last reward, exit condition

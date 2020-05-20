@@ -24,17 +24,18 @@ decay = 1e-8
 loss_f = 'huber_loss'  # huber_loss <---- check delta parameter
 opt = Adam(learning_rate=learning_rate, decay = decay, beta_1=0.9, beta_2=0.999, amsgrad=False)
 
-max_memory = 2**13
+max_memory = 2**16
 batch_size = 2**10  # full batch
 mini_batch_size = 2**7
 
 
-r_hat = -0.1
-beta = 0.01 # avg reward step --> consider 0.001
+r_hat = 0
+beta = 0.005  # avg reward step --> consider 0.001
 discount = 1 # discount factor
-tau_soft0 = 1 #temperature softmax
-eps0 = 1 # epsilon greedy
-
+tau_soft0 = 1 # temperature softmax
+tau_soft = 0.1
+eps0 = 0.8 # epsilon greedy
+eps_end = 0.14
 number_actions = 7
 direction_boundary = (number_actions - 1) / 2
 temperature_step = 1.5
@@ -119,12 +120,12 @@ if (env.train):
                 # tau_soft = (tau_soft0 - t_count / 1000)**3
                 # if tau_soft < 0.1 :
                 #     tau_soft = 0.1 
-                #
-                # action, q_hat, direction, energy_ai, q_values, q_values_norm, probs = DQL_agent.policy_softmax(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step)                
                 
-                eps = (eps0 - t_count / 5000)**3
-                if eps < 0.05 * number_actions:
-                    eps = 0.05 * number_actions
+                # action, q_hat, direction, energy_ai, q_values, probs = DQL_agent.policy_softmax_2(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step)                
+                eps_count = min(t_count, 50000)
+                eps = (1 - eps_count/50000)**8 * (eps0-eps_end) + eps_end
+                # if eps < 0.04 * number_actions:
+                #     eps = 0.04 * number_actions
                 action, q_hat, direction, energy_ai, q_values, probs = DQL_agent.policy_greedy(model, current_state, eps , number_actions, direction_boundary, temperature_step)
                 
                 
@@ -136,7 +137,6 @@ if (env.train):
                 
                 
                 # AVG reward update
-                # next_q_hat = np.max(model.predict(next_state)[0])
                 next_q_hat = np.max(target_model.predict(next_state)[0])
                 delta = reward - r_hat + discount * next_q_hat - q_hat
                 r_hat += beta * delta
@@ -211,6 +211,7 @@ if (env.train):
         if timestep > timestep_max:
             model.save("modelBVSOmax.h5")
             timestep_max = timestep
+        
             
             
         #Performance plot
@@ -226,7 +227,9 @@ if (env.train):
         
         if epoch % 25 == 0:
             
-            print(f'current_state: {prev_state}')
+            
+            print(f'final_state: {current_state}')
+            print(f'last_state: {prev_state}')
             print(f'q_values: {q_values}')
             print(f'probs= {probs}')
             
@@ -288,7 +291,7 @@ if (env.train):
         batch_memory = dqn.memory 
         last_lr = K.eval((model.optimizer.lr))
         with open("memory.pickle","wb") as f:
-            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, performance_plot, losses_plot, davg_plot, last_lr], f)
+            pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, performance_plot, losses_plot, davg_plot, last_lr, targets], f)
 
 
 

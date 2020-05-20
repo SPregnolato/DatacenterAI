@@ -4,6 +4,7 @@ from keras.optimizers import Adam
 import numpy as np
 from collections import deque
 import scipy.special as ssp
+from random import shuffle
 
 # POLICY --> TAKE ACTION
 def policy_softmax(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step):
@@ -29,18 +30,46 @@ def policy_softmax(model, current_state, tau_soft, number_actions, direction_bou
     return action, q_hat, direction, energy_ai, q_values, q_values_norm, probs
 
 
+
+def policy_softmax_2(model, current_state, tau_soft, number_actions, direction_boundary, temperature_step):
+    
+    # prediction
+    q_values = model.predict(current_state)[0] 
+    q_values_ = q_values / tau_soft
+    max_q = max(q_values_)
+    min_q = min(q_values_)
+    num = np.exp((q_values_ - max_q) / ((max_q - min_q)**2))
+    den = np.sum(num)
+    probs = num/den
+    
+    # softmax
+    action = np.random.choice(number_actions, p = probs)
+    # q_hat for avg reward update
+    q_hat = q_values[action]
+    # action to energy
+    if (action - direction_boundary < 0):
+        direction = -1
+    else:
+        direction = 1
+    energy_ai = abs(action - direction_boundary) * temperature_step
+
+    return action, q_hat, direction, energy_ai, q_values, probs
+
+
+
 def policy_greedy(model, current_state, eps , number_actions, direction_boundary, temperature_step):
     
     # prediction
     q_values = model.predict(current_state)[0]
-    
 
     # greedy
     probs = np.ones((1,number_actions)) * eps / number_actions
     probs[0, np.argmax(q_values)] = 1 - eps + eps / number_actions
     action = np.random.choice(number_actions, p = probs.squeeze())
+    
     # q_hat for avg reward update
     q_hat = q_values[action]
+   
     # action to energy
     if (action - direction_boundary < 0):
         direction = -1
@@ -95,6 +124,8 @@ class DQN():
     
     # Methods to build the memory in Experience Replay
     def remember(self, transition, game_over):
+        if len(self.memory) == self.max_memory-2:
+            shuffle(self.memory)
         self.memory.append([transition, game_over])
    
     # Methods to build two batches of 10 In and 10 Targes by extracting 10 transition
@@ -108,7 +139,10 @@ class DQN():
             current_state, action, reward, next_state, r_hat_i = self.memory[idx][0]
             game_over = self.memory[idx][1]
             inputs[i] = current_state
+            
             targets[i] = target_model.predict(current_state)[0]
+            # targets[i] = model.predict(current_state)[0]
+            
             # double dqn
             a = np.argmax(model.predict(next_state)[0])
             Q_sa_next = target_model.predict(next_state)[0][a]   

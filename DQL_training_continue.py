@@ -1,5 +1,6 @@
 import pickle
 import matplotlib.pyplot as plt
+from keras.models import load_model
 
 # open a file, where you stored the pickled data
 file = open('memory.pickle', 'rb')
@@ -8,6 +9,7 @@ file = open('memory.pickle', 'rb')
 # pickle.dump([batch_memory, epoch, rew_plot, AVG_rew_plot, AVG_rew_plot_2, epoch_plot, AVG_losses_plot, r_hat_plot, performance_plot, losses_plot, davg_plot, last_lr], f)
 data = pickle.load(file)
 
+batch_memory = data[0]
 rew_plot =data[2] 
 AVG_rew_plot =data[3] 
 AVG_rew_plot_2 = data[4] 
@@ -18,7 +20,13 @@ performance_plot = data[8]
 losses_plot = data[9]
 davg_plot = data[10]
 
+#Loading pre trained model (parameters: weights)
+# model_name = "modelBVSO800.h5"
+# model = load_model(model_name)
 
+
+# print(model.predict(batch_memory[10][0][0])[0])
+# print(model.predict(batch_memory[100][0][0])[0])
 
 plt.figure()
 plt.subplot(3,3,1)
